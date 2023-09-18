@@ -1,28 +1,56 @@
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToJsonElement
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
+import okio.buffer
+import okio.sink
+import okio.source
 import java.net.Socket
+import java.net.SocketTimeoutException
 import kotlin.math.floor
 
-class Spa(ip: String) {
-    private val client = Socket(ip, 8990)
-    private val output = PrintWriter(client.getOutputStream(), true)
-    private val input = BufferedReader(InputStreamReader(client.inputStream))
+class Spa(private val ip: String) {
+    private lateinit var socket: Socket
 
-    fun sendCommand(command: Command): Response {
+    init {
+        connectSocket()
+    }
+
+    fun sendInfo(): InfoResponse? {
+        val query = Query(type = Type.INFO.type, data = "")
+        val rawResponse = callSpa(query.toJsonString())
+
+        return rawResponse?.let { Json.decodeFromString<InfoResponse>(it) }
+    }
+
+    fun sendCommand(command: Command): StatusResponse? {
         val query = Query(
+            type = Type.COMMAND.type,
             data = command.request + checksum(command.request),
-            type = Type.COMMAND.type
         )
-        println("Sending: $query")
+        println(query)
+        val rawResponse = callSpa(query.toJsonString())
 
-        output.println(Json.encodeToJsonElement(query))
+        return rawResponse?.let { Json.decodeFromString<StatusResponse>(it) }
+    }
 
-        val rawResponse = input.readLine()
+    private fun callSpa(command: String): String? {
+        synchronized(this) {
+            println("Sending: $command")
 
-        return Json.decodeFromString<Response>(rawResponse)
+            var attempt = 0
+            var response: String? = null
+            while (response == null && attempt < 3) {
+                try {
+                    socket.sink().buffer().write(command.toByteArray()).flush()
+                    response = socket.source().buffer().readUtf8Line()
+                } catch (e: SocketTimeoutException) {
+                    Thread.sleep(2000)
+
+                    connectSocket()
+                    attempt++
+                }
+            }
+
+            return response
+        }
     }
 
     private fun checksum(data: String) = String.format("%02X", checksumAsInt(data))
@@ -39,5 +67,9 @@ class Spa(ip: String) {
         return calculatedChecksum
     }
 
-    fun close() = client.close()
+    private fun connectSocket() {
+        socket = Socket(ip, 8990).apply {
+            soTimeout = 2000
+        }
+    }
 }

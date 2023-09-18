@@ -7,12 +7,15 @@ fun main(args: Array<String>) {
 
     val spa = Spa("192.168.1.65")
 
+    println(spa.sendInfo())
+    println(spa.sendCommand(Command.STATUS))
+
+    Thread.sleep(10000)
+
     println(spa.sendCommand(Command.STATUS))
 
     //println(spa.sendCommand(Command.BUBBLES))
     //Thread.sleep(2000)
     //println(spa.sendCommand(Command.BUBBLES))
-
-    spa.close()
 }
 

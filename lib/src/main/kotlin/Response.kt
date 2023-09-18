@@ -3,7 +3,21 @@ import kotlinx.serialization.Transient
 import java.math.BigInteger
 
 @Serializable
-data class Response(val sid: String, val data: String, val result: String, val type: Int) {
+sealed class Response
+
+@Serializable
+data class InfoResponse(val sid: String, val data: String, val result: String, val type: Int) : Response() {
+    init {
+        require(type == Type.INFO.type) { "Type must be 3" }
+    }
+}
+
+@Serializable
+data class StatusResponse(val sid: String, val data: String, val result: String, val type: Int) : Response() {
+    init {
+        require(type == Type.STATUS.type) { "Type must be 2" }
+    }
+
     @Transient
     val decimalData = BigInteger(data, 16)
 
@@ -25,7 +39,7 @@ data class Response(val sid: String, val data: String, val result: String, val t
     @Transient
     val presetTemp = (decimalData shr 24).toInt() and 0xFF
     @Transient
-    val unit = if (presetTemp <= 40) "°C" else "°F"
+    val unit = if (presetTemp <= 40) TemperatureUnit.CELSIUS else TemperatureUnit.FAHRENHEIT
 
     @Transient
     val error = ((decimalData shr 88).toInt() and 0xFF).takeIf { it >= 181 }?.let { "E${it - 100}" }
