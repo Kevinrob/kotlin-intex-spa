@@ -10,3 +10,5 @@ plugins {
 }
 
 rootProject.name = "intex-spa"
+include("lib")
+include("sample")

@@ -1,6 +1,6 @@
 plugins {
     kotlin("jvm") version "1.9.0"
-    application
+    `java-library`
     kotlin("plugin.serialization") version "1.9.0"
 }
 
@@ -22,8 +22,4 @@ tasks.test {
 
 kotlin {
     jvmToolchain(8)
-}
-
-application {
-    mainClass.set("MainKt")
 }
